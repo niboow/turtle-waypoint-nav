@@ -3,6 +3,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include <vector>
 #include <utility>
+#include <cmath>
 
 class WaypointNav : public rclcpp::Node
 {
@@ -30,11 +31,24 @@ private:
   void poseCallback(const turtlesim::msg::Pose::SharedPtr msg){
     RCLCPP_INFO(this->get_logger(), "x: %f, y: %f", msg->x, msg->y);
 
+    double goal_x = waypoints_[current_waypoint_index_].first; //going into the vector, getting first double 
+    double goal_y = waypoints_[current_waypoint_index_].second; //second double 
+
+    double dx = goal_x - msg->x;
+    double dy = goal_y - msg->y;
+    double distance = std::sqrt(dx*dx + dy*dy); //pythoagorean
+    double angle_to_goal = std::atan2(dy, dx);
+    RCLCPP_INFO(this->get_logger(), "distance = %f", distance); 
+    RCLCPP_INFO(this->get_logger(), "angle to goal = %f", angle_to_goal); 
+
+
+
     auto velocity_msg = geometry_msgs::msg::Twist();
     velocity_msg.linear.x = 1.0;
     velocity_msg.linear.y = 0;
     velocity_msg.linear.z = 0;
     velocity_publisher_ ->publish(velocity_msg);
+
 
   }
 
