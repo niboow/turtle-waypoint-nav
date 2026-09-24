@@ -29,7 +29,6 @@ private:
 
 
   void poseCallback(const turtlesim::msg::Pose::SharedPtr msg){
-    RCLCPP_INFO(this->get_logger(), "x: %f, y: %f", msg->x, msg->y);
 
     double goal_x = waypoints_[current_waypoint_index_].first; //going into the vector, getting first double 
     double goal_y = waypoints_[current_waypoint_index_].second; //second double 
@@ -37,19 +36,37 @@ private:
     double dx = goal_x - msg->x;
     double dy = goal_y - msg->y;
     double distance = std::sqrt(dx*dx + dy*dy); //pythoagorean
+
+    if(distance < 0.3){ //the threshold for counting our goal reached
+      current_waypoint_index_++; //next waypoint
+      if (current_waypoint_index_ >= waypoints_.size()){ //if at the end of the list
+        auto stop_msg = geometry_msgs::msg::Twist();
+        velocity_publisher_->publish(stop_msg); //sets everything to 0
+        RCLCPP_INFO(this->get_logger(), "All waypoints reached!");
+        return;
+      }
+      //recompute against the new goal if end of list was not reached
+
+      //setting new values
+      goal_x = waypoints_[current_waypoint_index_].first; 
+      goal_y = waypoints_[current_waypoint_index_].second;
+      dx = goal_x - msg->x; 
+      dy = goal_y - msg->y;
+      distance = std::sqrt(dx*dx + dy*dy);
+    }
+
     double angle_to_goal = std::atan2(dy, dx);
-    RCLCPP_INFO(this->get_logger(), "distance = %f", distance); 
-    RCLCPP_INFO(this->get_logger(), "angle to goal = %f", angle_to_goal); 
+    double angle_diff = angle_to_goal - msg->theta;
+    while (angle_diff > M_PI) angle_diff -= 2 * M_PI;
+    while (angle_diff < -M_PI) angle_diff += 2 * M_PI;
 
-
+    double linear_speed = 0.3*distance;
+    double angular_speed = 0.8 * angle_diff;
 
     auto velocity_msg = geometry_msgs::msg::Twist();
-    velocity_msg.linear.x = 1.0;
-    velocity_msg.linear.y = 0;
-    velocity_msg.linear.z = 0;
+    velocity_msg.linear.x = linear_speed;
+    velocity_msg.angular.z = angular_speed;
     velocity_publisher_ ->publish(velocity_msg);
-
-
   }
 
 };
